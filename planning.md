@@ -16,6 +16,7 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+Searches listings dataset and returns matching items. 
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
@@ -28,6 +29,7 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
+Tell user we were not able to find good listing matches. Ask user to try a new prompt.
 
 ---
 
@@ -35,11 +37,12 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+Takes a new item and the user's wardrobe and suggests one or more outfit combinations.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `new_item` (dict): ...
-- `wardrobe` (dict): ...
+- `new_item` (dict): map of item with keys into different features of the item. What we will be suggesting an outfit against.
+- `wardrobe` (dict): the users current wardrobe (full of items with descriptions)
 
 **What it returns:**
 <!-- Describe the return value -->
@@ -53,6 +56,8 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
+Gives a short description of a full outfit that is shareable. Must be different 
+each time for different inputs. 
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
@@ -138,12 +143,26 @@ Write out what a full user interaction looks like from start to finish — tool 
 
 **Step 1:**
 <!-- What does the agent do first? Which tool is called? With what input? -->
+The program will load the listings into memory. 
+If failed might have to tell user to try again or cannot handle request. 
+The example wardrobe will be loaded into memory. We will loop getting user input.
+
+The first step is call search_listings. We will find top 3 listings that match as the data allows. Vintage t-shirts, worn tees, etc.
+
+If there are no listings found, tell user to try a different item description because nothing similar could be found.
+
+Show the suggested listing, and see if we should suggest an outfit with it. Otherwise ask if they want to see similar (try next out of top 3 or 5). Or ask for a new prompt.
 
 **Step 2:**
 <!-- What happens next? What was returned from step 1? What tool is called now? -->
+From search listings we get the top item. This goes into suggest outfit along with their wardrobe. 
+
+We display the suggested outfit to the user and ask if they want a fit card and description for instagram.
 
 **Step 3:**
 <!-- Continue until the full interaction is complete -->
+If they want a fit card, we give it to them. Ask if they want to find more items.
 
 **Final output to user:**
 <!-- What does the user actually see at the end? -->
+The user will see the fit card from create_fit_card if they like the outputs. And will be prompted to continue the conversation if need be.
