@@ -16,11 +16,11 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
-Searches listings dataset and returns matching items based on the description, size and max_price. Return an array results with top 8 matches.  
+Searches the listings dataset and returns up to 8 matching items, filtered by description, size, and max_price.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `description` (str): A natural language description of the item which can be compared against all keys (except id) in the listing to choose a match.
+- `description` (str): A natural language description of the item, matched against listing fields (title, description, style_tags, etc.). Already stripped of size/price by parse_query.
 - `size` (str): The user's clothing size. May be none to skip size filter.
 - `max_price` (float): Maximum price user is looking for. May be none to skip price filter.
 
@@ -47,7 +47,7 @@ Takes a new item and the user's wardrobe and suggests one or more outfit combina
 
 **What it returns:**
 <!-- Describe the return value -->
-Returns an outfit dict containing new_item plus complementary items, a description, and style tags.
+- `outfit_suggestion` (dict): Returns an outfit dict containing new_item plus complementary items, a description, and style tags. Also contains field: general_advice. If no outfit can be generated: all fields are None, except general_advice. If outfit can be generated, general_advice is None.
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the wardrobe is empty or no outfit can be suggested? -->
@@ -64,7 +64,7 @@ each time for different inputs.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `outfit` (dict): Outfit is a dict that contains items, new_item, and a description and style tags. Represents the outfit we will suggest to user.
+- `outfit` (dict): Outfit is a dict that contains items, new_item, and a description and style tags. Also, has field general_advice, that is None, unless outfit could not be generated. Represents the outfit we will suggest to user.
 - `new_item` (dict): New item we got from search_listings
 
 **What it returns:**
@@ -80,6 +80,29 @@ If create fit card fails, give the user the listing and the suggested outfit det
 ### Additional Tools (if any)
 
 <!-- Copy the block above for any tools beyond the required three -->
+### Tool 4: parse_query
+
+**What it does:**
+Parses a natural language user query string into structured parameters 
+for search_listings. Extracts size and max_price if present, and returns 
+the remaining text as the description.
+
+**Input parameters:**
+- `query` (str): The raw natural language query from the user. 
+  e.g. "vintage graphic tee under $30, size M"
+
+**What it returns:**
+Returns a dict with three fields:
+- `description` (str): The query with size and price references removed.
+  e.g. "vintage graphic tee"
+- `size` (str or None): Extracted size if present, e.g. "M". None if not found.
+- `max_price` (float or None): Extracted price if present, e.g. 30.0. None if not found.
+
+**What happens if it fails or returns nothing:**
+If parsing fails or no fields can be extracted, description defaults to 
+the full raw query string, size defaults to None, and max_price defaults 
+to None. The agent never stops on a parse failure — it always produces 
+something search_listings can use.
 
 ---
 
@@ -87,6 +110,22 @@ If create fit card fails, give the user the listing and the suggested outfit det
 
 **How does your agent decide which tool to call next?**
 <!-- Describe the logic your planning loop uses. What does it look at? What conditions change its behavior? How does it know when it's done? -->
+The raw query is first passed to parse_query, which extracts description, size, and max_price. These are then passed to search_listings.
+
+If `results` is empty, the agent returns an error message prompting the 
+user to try a different description, size, or price. The run ends here — 
+`suggest_outfit` and `create_fit_card` are not called.
+
+If `results` is non-empty, `results[0]` is stored as `session["selected_item"]` 
+and passed alongside `session["wardrobe"]` into `suggest_outfit`. If the 
+wardrobe is empty, general styling advice is returned rather than 
+combinations from owned items. The result is stored as `session["outfit_suggestion"]`.
+
+`create_fit_card` is then called with `session["outfit_suggestion"]` and 
+`session["selected_item"]`. The result is stored as `session["fit_card"]`.
+
+The agent is done when either the error path returns early or all three 
+tools have completed and `session["fit_card"]` is populated.
 
 ---
 
@@ -110,7 +149,6 @@ For each tool, describe the specific failure mode you're handling and what the a
 ---
 
 ## Architecture
-
 <!-- Draw a diagram of your agent showing how the components connect:
      User input → Planning Loop → Tools (search_listings, suggest_outfit, create_fit_card)
                                                                           ↕
@@ -119,34 +157,31 @@ For each tool, describe the specific failure mode you're handling and what the a
      ASCII art, a Mermaid diagram (https://mermaid.js.org/syntax/flowchart.html), or an embedded
      sketch are all fine. You'll share this diagram with an AI tool when asking it to implement
      the planning loop and each individual tool. -->
-``` mermaid
+```mermaid
 flowchart TD
-    User([User query:<br/>description, size, max_price])
-    User --> PL[Planning Loop]
-
+    User([User query:<br/>natural language string + wardrobe choice])
+    User --> Parse["parse_query(query)<br/>returns description, size, max_price"]
+    Parse --> PL[Planning Loop]
     PL -->|"description, size, max_price"| Search["search_listings(description, size, max_price)<br/>Searches mock listings dataset"]
-
     Search --> CheckEmpty{results empty?}
-
     CheckEmpty -->|"results = [ ]"| Err["[ERROR] session.error =<br/>No listings found. Try a higher<br/>price or different size."]
-
     CheckEmpty -->|"results = [item, ...]"| S1[["Session state:<br/>selected_item = results[0]"]]
     S1 -->|"selected_item, wardrobe"| Suggest["suggest_outfit(new_item, wardrobe)"]
-
     Suggest --> WardrobeCheck{wardrobe empty?}
     WardrobeCheck -->|"yes"| GeneralAdvice["General styling advice"]
     WardrobeCheck -->|"no"| FullOutfit["Full outfit combos"]
     GeneralAdvice --> S2[["Session state:<br/>outfit_suggestion = '...'"]]
     FullOutfit --> S2
-
     S2 -->|"outfit_suggestion, selected_item"| FitCard["create_fit_card(outfit, new_item)"]
     FitCard --> S3[["Session state:<br/>fit_card = '...'"]]
-
     Err --> Continue{Continue<br/>conversation?}
     S3 --> Continue
     Continue -.->|"Yes: new query"| User
     Continue -->|No| End([Return session / End])
+
+
 ```
+
 ---
 
 ## AI Tool Plan
@@ -163,8 +198,14 @@ flowchart TD
      before trusting it" is a plan. -->
 
 **Milestone 3 — Individual tool implementations:**
+- Remember to use load_listings(), get_example_wardrobe(), and get_empty_warddrobe
+0. `parse_query(query)`: Give Claude Tool 4 details from planning.md (input, return value, failure mode). Ask it to implement a function that takes the raw query string and returns a dict with `description`, `size`, and `max_price`. Tell it to extract size (e.g. "size M") and max_price (e.g. "under $30") from the string, with the remaining text as `description`, and to default any field it can't find to None (never crash on a parse failure). Before using it, I'll test it on query strings: one with both size and price, one with only price, one with only size, and one with neither. Confirming each returns the expected dict with correct defaults.
+1. `search_listings(description, size, max_price)`: Give Claude Tool 1 details from planning.md (inputs, return value, failure mode) and ask it to implement the function using load_listings() from the data loader. Before running it, I'll check that the generated code filters by all three parameters and handles the empty-results case. Then I'll test it with 3 queries.
+2. `suggest_outfit(new_item, wardrobe)`: Give Claude Tool 2 details from planning.md (inputs, return value, failure mode). Tell it that the loop is supposed to pass results[0] of search_listings() and the wardrobe loaded at startup into suggest outfit. suggest_outfit() does not call get_example_wardrobe(). The outfit generated by suggest_outfit is loaded into session. Run the flow between search listings and suggest outfit 3 times, check that the resulting outfit dict contains the new_item and appropriate selections, description, and style tags. Test empty wardrobe example to see that styling suggestions are made from LLM fashion knowledge.
+3. `create_fit_card(outfit, new_item)`: Give Claude Tool 3 details from planning.md (inputs, return value, failure mode). In the planning loop, the outfit in session, and new_item from session are passed to create_fit_card. Run loop 3 times, check that description is relevant and human-like. 
 
 **Milestone 4 — Planning loop and state management:**
+0. run_agent() step 1: Tell Claude purpose is: Initialize the session with _new_session(). Tell it to use get_example_wardrobe to load wardrobe into session. session["wardrobe"] = get_example_wardrobe(). Confirm that code is loading these correctly. Test with dataset and check output. 
 
 ---
 
