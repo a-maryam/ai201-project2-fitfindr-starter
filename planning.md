@@ -16,21 +16,21 @@ You must have at least 3 tools. The three required tools are listed — add any 
 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
-Searches listings dataset and returns matching items. 
+Searches listings dataset and returns matching items based on the description, size and max_price. Return an array results with top 8 matches.  
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `description` (str): ...
-- `size` (str): ...
-- `max_price` (float): ...
+- `description` (str): A natural language description of the item which can be compared against all keys (except id) in the listing to choose a match.
+- `size` (str): The user's clothing size. May be none to skip size filter.
+- `max_price` (float): Maximum price user is looking for. May be none to skip price filter.
 
 **What it returns:**
 <!-- Describe the return value — what fields does a result contain? -->
-
+Results is an array of size 8 which contains listings. Each listing is a dictionary describing an item (listing) with its id, title, description, size, condition, etc. These are pulled from the listings.json dataset if they are matching the user provided parameters. 
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
-Tell user we were not able to find good listing matches. Ask user to try a new prompt.
+Tell user we were not able to find good listing matches. Ask user to try a new prompt if they would like to continue.
 
 ---
 
@@ -42,14 +42,16 @@ Takes a new item and the user's wardrobe and suggests one or more outfit combina
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `new_item` (dict): map of item with keys into different features of the item. What we will be suggesting an outfit against.
+- `new_item` (dict): dict which describes the item; keys are different features of the item. What we will be suggesting an outfit against.
 - `wardrobe` (dict): the users current wardrobe (full of items with descriptions)
 
 **What it returns:**
 <!-- Describe the return value -->
+Returns an outfit dict containing new_item plus complementary items, a description, and style tags.
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the wardrobe is empty or no outfit can be suggested? -->
+If the wardrobe is empty, that is treated as a normal case: the tool returns general styling advice based on the LLM's fashion knowledge rather than combinations from owned items, and the flow continues to create_fit_card. If the tool actually fails or returns nothing usable (e.g. the LLM call errors), the agent reports that it couldn't generate an outfit suggestion and asks the user whether they'd like to search for something different.
 
 ---
 
@@ -62,13 +64,16 @@ each time for different inputs.
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `outfit` (...): ...
+- `outfit` (dict): Outfit is a dict that contains items, new_item, and a description and style tags. Represents the outfit we will suggest to user.
+- `new_item` (dict): New item we got from search_listings
 
 **What it returns:**
 <!-- Describe the return value -->
+Returns a short caption for the item. Tells where they found it. Sometimes mentions the price. Sounds excited. Is descriptive of the style of the outfit. Sounds conversational and human.
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the outfit data is incomplete? -->
+If create fit card fails, give the user the listing and the suggested outfit details. And tell them we were unable to create a fit card. Ask if they would like to try again. 
 
 ---
 
