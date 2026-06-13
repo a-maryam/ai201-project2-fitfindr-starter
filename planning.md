@@ -144,7 +144,7 @@ For each tool, describe the specific failure mode you're handling and what the a
 | search_listings | No results match the query | Tell the user no listings were found and prompt them to try again with a new description |
 | suggest_outfit | Wardrobe is empty | outfit_suggestion has a field called general_advice which is filled with fashion suggestion from the LLM and all other fields are made None. We continue to the fit_card but with the fashion suggestion |
 | create_fit_card | Outfit input is missing or incomplete | We generate a fitcard with the fashion suggestion filled in suggest_outfit if some outfit input is missing. If somehow everything is missing we tell the user something went wrong to try again. |
-| parse_query | | | |
+| parse_query | Query string is empty or LLM returns garbage | Return to user and request they try again with a different description. Does not crash. | 
 
 ---
 
