@@ -114,32 +114,33 @@ For each tool, describe the specific failure mode you're handling and what the a
      ASCII art, a Mermaid diagram (https://mermaid.js.org/syntax/flowchart.html), or an embedded
      sketch are all fine. You'll share this diagram with an AI tool when asking it to implement
      the planning loop and each individual tool. -->
-```mermaid  
+``` mermaid
 flowchart TD
-    A([User Query]) --> B
+    User([User query:<br/>description, size, max_price])
+    User --> PL[Planning Loop]
 
-    subgraph loop[Planning Loop]
-        B["search_listings(description, size, max_price)"]
-        B --> C{results?}
-        C -->|"results=[]"| ERR1["[ERROR] No listings found"]
-        C -->|"results=[item, ...]"| D["Session: selected_item = results[0]\nDisplay listing to user"]
-        D --> F{User decision?}
-        F -->|see similar| D
-        F -->|nothing appeals| EXIT1([User exit])
-        F -->|new search| B
-        F -->|want outfit| H["suggest_outfit(selected_item, wardrobe)"]
-        H --> I["Session: outfit_suggestion = '...'\nDisplay outfit to user"]
-        I --> K{Want fit card?}
-        K -->|no thanks| EXIT2([User exit])
-        K -->|find more| B
-        K -->|yes| L["create_fit_card(outfit_suggestion, selected_item)"]
-        L --> M["Session: fit_card = '...'\nDisplay fit card to user"]
-        M --> P{Continue?}
-        P -->|find more| B
-        P -->|done| EXIT3([User exit])
-    end
+    PL -->|"description, size, max_price"| Search["search_listings(description, size, max_price)<br/>Searches mock listings dataset"]
 
-    ERR1 --> END([error path returns here])
+    Search --> CheckEmpty{results empty?}
+
+    CheckEmpty -->|"results = [ ]"| Err["[ERROR] session.error =<br/>No listings found. Try a higher<br/>price or different size."]
+
+    CheckEmpty -->|"results = [item, ...]"| S1[["Session state:<br/>selected_item = results[0]"]]
+    S1 -->|"selected_item, wardrobe"| Suggest["suggest_outfit(new_item, wardrobe)"]
+
+    Suggest --> WardrobeCheck{wardrobe empty?}
+    WardrobeCheck -->|"yes"| GeneralAdvice["General styling advice"]
+    WardrobeCheck -->|"no"| FullOutfit["Full outfit combos"]
+    GeneralAdvice --> S2[["Session state:<br/>outfit_suggestion = '...'"]]
+    FullOutfit --> S2
+
+    S2 -->|"outfit_suggestion, selected_item"| FitCard["create_fit_card(outfit, new_item)"]
+    FitCard --> S3[["Session state:<br/>fit_card = '...'"]]
+
+    Err --> Continue{Continue<br/>conversation?}
+    S3 --> Continue
+    Continue -.->|"Yes: new query"| User
+    Continue -->|No| End([Return session / End])
 ```
 ---
 
@@ -162,34 +163,35 @@ flowchart TD
 
 ---
 
+
+## Design
 ## A Complete Interaction (Step by Step)
 
 Write out what a full user interaction looks like from start to finish — tool call by tool call. Use a specific example query.
 
-**Example user query:** "I'm looking for a vintage graphic tee under $30. I mostly wear baggy jeans and chunky sneakers. What's out there and how would I style it?"
+**Example user query:** "I'm looking for a vintage graphic tee under $30. I am size M. I mostly wear baggy jeans and chunky sneakers. What's out there and how would I style it?"
 
 **Step 1:**
 <!-- What does the agent do first? Which tool is called? With what input? -->
-The program will load the listings into memory. 
-If failed might have to tell user to try again or cannot handle request. 
-The example wardrobe will be loaded into memory. We will loop getting user input.
-
-The first step is call search_listings. We will find top 3 listings that match as the data allows. Vintage t-shirts, worn tees, etc.
-
-If there are no listings found, tell user to try a different item description because nothing similar could be found.
-
-Show the suggested listing, and see if we should suggest an outfit with it. Otherwise ask if they want to see similar (try next out of top 3 or 5). Or ask for a new prompt.
+The agent calls search_listing with the params. It loads up the listings from the dataset and filters by description, size, and price. 
 
 **Step 2:**
 <!-- What happens next? What was returned from step 1? What tool is called now? -->
-From search listings we get the top item. This goes into suggest outfit along with their wardrobe. 
+Agent returns the top k listings by relevance. We select the top result. If results of search are empty: agent will tell the user to try a different description or change other requirements. Agent stops if results are empty.
 
-We display the suggested outfit to the user and ask if they want a fit card and description for instagram.
+We call suggest_outfit(new_item=selected_item, wardrobe=wardrobe) using the item stored in session and the wardrobe loaded at startup. 
 
+Agent stores result as outfit_suggestion in session. 
+
+If wardrobe is empty we offer general styling advice. 
+
+If suggest_outfit fails or returns nothing we tell the user we couldn't generate a suggestion and then asks user if they would like to try to find a new outfit. This is not in the diagram (will be listed under error-handling).
+
+Store outfit suggestion. 
 **Step 3:**
 <!-- Continue until the full interaction is complete -->
-If they want a fit card, we give it to them. Ask if they want to find more items.
+Agent calls create_fit_card with outfit_suggestion and new_item which are stored in the session. Agent stores result as fit_card in the session and displays it to user: "thrifted this faded band tee off of depop for $22 and it looks amazing with levi's."
 
 **Final output to user:**
 <!-- What does the user actually see at the end? -->
-The user will see the fit card from create_fit_card if they like the outputs. And will be prompted to continue the conversation if need be.
+User receives matched listing from step 1, outfit suggestion from step 2 and the shareable fit card from step 3. If search listing fails, user will be prompted to try again with different parameters. If wardrobe is empty, general styling advice will be offered. If suggest outfit fails, prompt the user to try searching for something different.
