@@ -27,6 +27,7 @@ Searches listings dataset and returns matching items.
 **What it returns:**
 <!-- Describe the return value — what fields does a result contain? -->
 
+
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
 Tell user we were not able to find good listing matches. Ask user to try a new prompt.
@@ -113,7 +114,33 @@ For each tool, describe the specific failure mode you're handling and what the a
      ASCII art, a Mermaid diagram (https://mermaid.js.org/syntax/flowchart.html), or an embedded
      sketch are all fine. You'll share this diagram with an AI tool when asking it to implement
      the planning loop and each individual tool. -->
+```mermaid  
+flowchart TD
+    A([User Query]) --> B
 
+    subgraph loop[Planning Loop]
+        B["search_listings(description, size, max_price)"]
+        B --> C{results?}
+        C -->|"results=[]"| ERR1["[ERROR] No listings found"]
+        C -->|"results=[item, ...]"| D["Session: selected_item = results[0]\nDisplay listing to user"]
+        D --> F{User decision?}
+        F -->|see similar| D
+        F -->|nothing appeals| EXIT1([User exit])
+        F -->|new search| B
+        F -->|want outfit| H["suggest_outfit(selected_item, wardrobe)"]
+        H --> I["Session: outfit_suggestion = '...'\nDisplay outfit to user"]
+        I --> K{Want fit card?}
+        K -->|no thanks| EXIT2([User exit])
+        K -->|find more| B
+        K -->|yes| L["create_fit_card(outfit_suggestion, selected_item)"]
+        L --> M["Session: fit_card = '...'\nDisplay fit card to user"]
+        M --> P{Continue?}
+        P -->|find more| B
+        P -->|done| EXIT3([User exit])
+    end
+
+    ERR1 --> END([error path returns here])
+```
 ---
 
 ## AI Tool Plan
