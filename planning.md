@@ -142,9 +142,9 @@ For each tool, describe the specific failure mode you're handling and what the a
 
 | Tool | Failure mode | Agent response |
 |------|-------------|----------------|
-| search_listings | No results match the query | |
-| suggest_outfit | Wardrobe is empty | |
-| create_fit_card | Outfit input is missing or incomplete | |
+| search_listings | No results match the query | Tell the user no listings were found and prompt them to try again with a new description |
+| suggest_outfit | Wardrobe is empty | outfit_suggestion has a field called general_advice which is filled with fashion suggestion from the LLM and all other fields are made None. We continue to the fit_card but with the fashion suggestion |
+| create_fit_card | Outfit input is missing or incomplete | We generate a fitcard with the fashion suggestion filled in suggest_outfit if some outfit input is missing. If somehow everything is missing we tell the user something went wrong to try again. |
 
 ---
 
@@ -231,7 +231,7 @@ Agent stores result as outfit_suggestion in session.
 
 If wardrobe is empty we offer general styling advice. 
 
-If suggest_outfit fails or returns nothing we tell the user we couldn't generate a suggestion and then asks user if they would like to try to find a new outfit. This is not in the diagram (will be listed under error-handling).
+If suggest_outfit fails or returns nothing we tell the user we couldn't generate a suggestion and then asks user if they would like to try to find a new outfit. This is not in the diagram (will be listed under error-handling). !! REVIEW !!
 
 Store outfit suggestion. 
 **Step 3:**
