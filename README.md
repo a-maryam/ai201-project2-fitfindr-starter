@@ -4,14 +4,14 @@
 
 ### Instance 1
 **What I gave it**
-
+Gave Claude the AI tool specifications and the guidelines in the function docstring 
 **What I adjusted**
-
+Told Claude to adjust so that you give useful detail about the new item in the format of a string if there are problems with outfit (line 213).
 ### Instance 2
 **What I gave it**
-
+Implement run agent with planning loop and architecture diagram from planning.md. 
 **What I adjusted**
-
+ if error happens during search, tell the user to try with a different description. Check against tools.py if this functionality is already built in. Stay faithful to the architecture diagram in planning.md
 
 ## What's Included
 

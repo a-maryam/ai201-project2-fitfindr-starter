@@ -12,7 +12,9 @@ Tools:
     create_fit_card(outfit, new_item)               → str
 """
 
+import json
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -32,6 +34,58 @@ def _get_groq_client():
             "GROQ_API_KEY not set. Add it to a .env file in the project root."
         )
     return Groq(api_key=api_key)
+
+
+# ── Tool 4: parse_query ───────────────────────────────────────────────────────
+
+def parse_query(query: str) -> dict:
+    """
+    Parse a natural language query into structured search parameters.
+
+    Args:
+        query: Natural language query, e.g. "vintage graphic tee under $30, size M"
+
+    Returns:
+        A dict with keys:
+            description (str):        Query text with size/price references removed.
+            size        (str | None):  Clothing size if present, else None.
+            max_price   (float | None): Price ceiling if present, else None.
+
+        Never raises — on any parsing error, description defaults to the full
+        query string and size/max_price default to None.
+    """
+    client = _get_groq_client()
+
+    prompt = (
+        "Extract structured fields from this clothing search query.\n"
+        "Return ONLY a JSON object with exactly these three keys:\n"
+        '  "description": the item description with size and price references removed,\n'
+        '  "size": clothing size string if present (e.g. "XS", "S", "M", "L", "XL", "8"), or null,\n'
+        '  "max_price": maximum price as a float if present, or null.\n\n'
+        f'Query: "{query}"\n\n'
+        "JSON object:"
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+        content = response.choices[0].message.content.strip()
+
+        # Strip markdown code fences if present
+        match = re.search(r"\{.*\}", content, re.DOTALL)
+        raw = match.group(0) if match else content
+        parsed = json.loads(raw)
+
+        return {
+            "description": parsed.get("description") or query,
+            "size": parsed.get("size") or None,
+            "max_price": float(parsed["max_price"]) if parsed.get("max_price") is not None else None,
+        }
+    except Exception:
+        return {"description": query, "size": None, "max_price": None}
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────

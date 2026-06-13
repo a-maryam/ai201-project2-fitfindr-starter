@@ -112,8 +112,7 @@ something search_listings can use.
 The raw query is first passed to parse_query, which extracts description, size, and max_price. These are then passed to search_listings.
 
 If `results` is empty, the agent returns an error message prompting the 
-user to try a different description, size, or price. The run ends here — 
-`suggest_outfit` and `create_fit_card` are not called.
+user to try a different description, size, or price. `suggest_outfit` and `create_fit_card` are not called. The user is prompted to try another message.
 
 If `results` is non-empty, `results[0]` is stored as `session["selected_item"]` 
 and passed alongside `session["wardrobe"]` into `suggest_outfit`. If the 
@@ -205,8 +204,7 @@ flowchart TD
 **Milestone 4 — Planning loop and state management:**
 1. Tell Claude that handle_query in app.py receives user_query (str) and wardrobe_choice (str) from Gradio. It needs to protect against an empty query. Return and tell the user that the request needs more information. Select wardrobe for the session by calling either get_example_wardrobe() if Example wardrobe was chosen or get_empty_wardrobe() if Empty wardrobe (new user) button was chosen. Call run_agent(user_query, wardrobe). If session["error"] is set, return the error in the first panel and empty strings for the other two. Otherwise, Format session["selected_item"] dict into a readable listing string (title, price, platform, condition, size). Then format session["outfit_suggestion"] dict into a readable string, if general_advice is not None, then display that, otherwise display outfit items and description. Return three strings for the Gradio panels: selected_item which you formatted, outfit_suggestion which you formatted, and session["fit_card]" which is already a string. 
 2. Give Claude the architecture diagram and planning loop from planning.md. Tell it to implement run_agent(user_query, wardrobe) with the following. Initialize the session with _new_session(). Call parse_query(user_query) to extract description, size, max_price using LLM parsing. Call search_listings(description, size, max_price) with the parsed parameters. Store results in session["search_results"]. If results is empty: set session["error"] to a helpful message and prompt the user to try again with a new query. Do not give empty input to suggest_outfit. Select the top result from search_listings return value. Store in session["selected_item]. Call suggest_outfit() with the selected item and wardrobe. Store the result in session["outfit_suggestion"]. Call create_fit_card() with the outfit suggestion and selected item. Store the result in session["fit_card"]. Return the session. 
-3. State Management: 
-
+3. State Management: Print session dict after a successful path run and make sure all four keys are filled session["selected_item"] (dict from listings), session["outfit_suggestion"] (dict with either items+description+style_tags or general_advice), session["fit_card"], session["error"] (None). Then run with get_empty_wardrobe() passed in via the Gradio radio button and confirm the flow still completes through to session["fit_card"] with general_advice content.
 
 ---
 

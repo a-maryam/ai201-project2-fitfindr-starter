@@ -18,7 +18,7 @@ Usage (once implemented):
     print(result["error"])   # None on success
 """
 
-from tools import search_listings, suggest_outfit, create_fit_card
+from tools import parse_query, search_listings, suggest_outfit, create_fit_card
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -92,10 +92,52 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     Before writing code, complete the Planning Loop and State Management sections
     of planning.md — your implementation should match what you described there.
     """
-    # TODO: implement the planning loop
     session = _new_session(query, wardrobe)
-    session["error"] = "Planning loop not yet implemented."
-    return session
+
+    while True:
+        # Step 2: parse query → description, size, max_price
+        if not session["parsed"]:
+            session["parsed"] = parse_query(query)
+            continue
+
+        # bail early if any step set an error
+        if session["error"] is not None:
+            return session
+
+        # Step 3: search listings
+        if not session["search_results"] and session["selected_item"] is None:
+            parsed = session["parsed"]
+            session["search_results"] = search_listings(
+                parsed["description"], parsed["size"], parsed["max_price"]
+            )
+            if not session["search_results"]:
+                session["error"] = (
+                    "No listings found matching your search. "
+                    "Try a different description, size, or a higher price."
+                )
+            continue
+
+        # Step 4: select top result
+        if session["selected_item"] is None:
+            session["selected_item"] = session["search_results"][0]
+            continue
+
+        # Step 5: suggest outfit (empty wardrobe handled inside suggest_outfit)
+        if session["outfit_suggestion"] is None:
+            session["outfit_suggestion"] = suggest_outfit(
+                session["selected_item"], wardrobe
+            )
+            continue
+
+        # Step 6: create fit card
+        if session["fit_card"] is None:
+            session["fit_card"] = create_fit_card(
+                session["outfit_suggestion"], session["selected_item"]
+            )
+            continue
+
+        # All steps complete
+        return session
 
 
 # ── CLI test ──────────────────────────────────────────────────────────────────
