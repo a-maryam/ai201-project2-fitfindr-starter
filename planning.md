@@ -26,7 +26,7 @@ Searches the listings dataset and returns up to 8 matching items, filtered by de
 
 **What it returns:**
 <!-- Describe the return value — what fields does a result contain? -->
-Results is an array of size 8 which contains listings. Each listing is a dictionary describing an item (listing) with its id, title, description, size, condition, etc. These are pulled from the listings.json dataset if they are matching the user provided parameters. 
+- `results` (list): Results is an array of size 8 which contains listings. Each listing is a dictionary describing an item (listing) with its id, title, description, size, condition, etc. These are pulled from the listings.json dataset if they are matching the user provided parameters. 
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
@@ -47,7 +47,7 @@ Takes a new item and the user's wardrobe and suggests one or more outfit combina
 
 **What it returns:**
 <!-- Describe the return value -->
-- `outfit_suggestion` (dict): Returns an outfit dict containing new_item plus complementary items, a description, and style tags. Also contains field: general_advice. If no outfit can be generated: all fields are None, except general_advice. If outfit can be generated, general_advice is None.
+- `outfit_suggestion` (dict): Returns an outfit dict containing new_item plus complementary items, a description, and style tags. Also contains field: general_advice. If no outfit can be generated: all fields are None, except general_advice. If outfit can be generated, general_advice is None. dict is converted into a display string by handle_query before being shown to the user. 
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the wardrobe is empty or no outfit can be suggested? -->
@@ -69,7 +69,7 @@ each time for different inputs.
 
 **What it returns:**
 <!-- Describe the return value -->
-Returns a short caption for the item. Tells where they found it. Sometimes mentions the price. Sounds excited. Is descriptive of the style of the outfit. Sounds conversational and human.
+- `caption` (str): Returns a short caption for the item. Tells where they found it. Sometimes mentions the price. Sounds excited. Is descriptive of the style of the outfit. Sounds conversational and human.
 
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the outfit data is incomplete? -->
@@ -203,13 +203,12 @@ flowchart TD
 3. `create_fit_card(outfit, new_item)`: Give Claude Tool 3 details from planning.md (input, return, failure scenario). In the planning loop, the outfit in session, and new_item from session are passed to create_fit_card. Run loop 3 times, check that description is relevant and human-like. 
 
 **Milestone 4 — Planning loop and state management:**
-1. Tell Claude that handle_query in app.py receives user_query (str) and wardrobe_choice (str) from Gradio. It needs to protect against an empty query. Return and tell the user that the request needs more information. Select wardrobe for the session by calling either get_example_wardrobe() if Example wardrobe was chosen or get_empty_wardrobe() if Empty wardrobe (new user) button was chosen. Call run_agent(user_query, wardrobe). If session["error"] is set, return the error in the first panel and empty strings for the other two. Otherwise, format session["selected_item"] into a readable listing_textstring and return it along with session["outfit_suggestion"] and session["fit_card"].
+1. Tell Claude that handle_query in app.py receives user_query (str) and wardrobe_choice (str) from Gradio. It needs to protect against an empty query. Return and tell the user that the request needs more information. Select wardrobe for the session by calling either get_example_wardrobe() if Example wardrobe was chosen or get_empty_wardrobe() if Empty wardrobe (new user) button was chosen. Call run_agent(user_query, wardrobe). If session["error"] is set, return the error in the first panel and empty strings for the other two. Otherwise, Format session["selected_item"] dict into a readable listing string (title, price, platform, condition, size). Then format session["outfit_suggestion"] dict into a readable string, if general_advice is not None, then display that, otherwise display outfit items and description. Return three strings for the Gradio panels: selected_item which you formatted, outfit_suggestion which you formatted, and session["fit_card]" which is already a string. 
 2. Give Claude the architecture diagram and planning loop from planning.md. Tell it to implement run_agent(user_query, wardrobe) with the following. Initialize the session with _new_session(). Call parse_query(user_query) to extract description, size, max_price using LLM parsing. Call search_listings(description, size, max_price) with the parsed parameters. Store results in session["search_results"]. If results is empty: set session["error"] to a helpful message and prompt the user to try again with a new query. Do not give empty input to suggest_outfit. Select the top result from search_listings return value. Store in session["selected_item]. Call suggest_outfit() with the selected item and wardrobe. Store the result in session["outfit_suggestion"]. Call create_fit_card() with the outfit suggestion and selected item. Store the result in session["fit_card"]. Return the session. 
 3. State Management: 
 
 
 ---
-
 
 ## Design
 ## A Complete Interaction (Step by Step)
