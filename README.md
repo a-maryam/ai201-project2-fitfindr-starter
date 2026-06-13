@@ -1,6 +1,17 @@
-# FitFindr — Starter Kit
+# FitFindr 
 
-This starter kit contains everything you need to begin Project 2.
+## AI Usage 
+
+### Instance 1
+**What I gave it**
+
+**What I adjusted**
+
+### Instance 2
+**What I gave it**
+
+**What I adjusted**
+
 
 ## What's Included
 
