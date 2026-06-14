@@ -23,23 +23,24 @@ The loop continues until session is returned. First, we parse the query. If at a
 8. session['error']: set if the interaction ended early. This is set when an error occurs at any point during the loop. This is saved in session and we end and ask the user if they want to query again.
 
 ## Error handling strategy for each tool with at least one concrete example
-|Tool name | Error Handling  | Example (minimum of one) | 
+|Tool name | Error Handling  | 
 |--|--| -- |
-| parse_query  | If size and price are not found in the string we make them None | |
-| search_listings | we check if price and/or size are None before checking against listing price and size. | |
-| suggest_outfit  | if wardrobe empty we give general styling advice | |
-| create_fit_card | if outfit is None or empty we give style suggestions instead | >> from tools import search_listings, suggest_outfit 
->> from utils.data_loader import get_example_wardrobe, get_empty_wardrobe   
->> results = search_listings('vintage graphic tee', size=None, max_price=50)
->> print(suggest_outfit(results[0], get_empty_wardrobe()))
->> "
+| parse_query  | If size and price are not found in the string we make them None | 
+| search_listings | we check if price and/or size are None before checking against listing price and size. | 
+| suggest_outfit  | if wardrobe empty we give general styling advice | 
+| create_fit_card | if outfit is None or empty we give style suggestions instead | 
+### Errorhandling example
+from tools import search_listings, suggest_outfit 
+from utils.data_loader import get_example_wardrobe, get_empty_wardrobe   
+results = search_listings('vintage graphic tee', size=None, max_price=50)
+print(suggest_outfit(results[0], get_empty_wardrobe()))
 This Y2K Baby Tee is perfect for creating a nostalgic, cottagecore-inspired look. To style it, pair with:
 
 * High-waisted jeans or a flowy skirt for a feminine touch
 * Distressed denim shorts for a casual, summery vibe
 * A flowy cardigan or crochet top for a layered, whimsical look
 
-The tee's fitted crop length makes it ideal for high-waisted bottoms. Consider adding neutral-colored shoes, like sneakers or sandals, to balance the playful butterfly graphic. This piece suits a soft, romantic aesthetic, making it great for everyday wear or a music festival-inspired look. Start building your wardrobe with this tee, then add complementary pieces like a denim jacket, a floppy hat, or layered necklaces to enhance the overall cottagecore vibe.|
+The tee's fitted crop length makes it ideal for high-waisted bottoms. Consider adding neutral-colored shoes, like sneakers or sandals, to balance the playful butterfly graphic. This piece suits a soft, romantic aesthetic, making it great for everyday wear or a music festival-inspired look. Start building your wardrobe with this tee, then add complementary pieces like a denim jacket, a floppy hat, or layered necklaces to enhance the overall cottagecore vibe.
 ## Spec Reflection
 ### How the spec helped you?
 My spec was written very thoroughly so Claude was able to implement it accurately. I think my prompting the user to try again on failure was a little different from what the project expected so at times when Claude was looking at my spec and the todos it was getting confused. At those times, I had to push the AI to follow my spec. 
