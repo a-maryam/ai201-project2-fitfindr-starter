@@ -24,7 +24,7 @@ The loop continues until session is returned. First, we parse the query. If at a
 
 ## Error handling strategy for each tool with at least one concrete example
 |Tool name | Error Handling  | 
-|--|--| -- |
+|--|--|
 | parse_query  | If size and price are not found in the string we make them None | 
 | search_listings | we check if price and/or size are None before checking against listing price and size. | 
 | suggest_outfit  | if wardrobe empty we give general styling advice | 
